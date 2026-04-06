@@ -1,0 +1,36 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "build:prod": "vite build --mode production",
+        "build:preload": "vite build --mode production && php artisan optimize",
+        "optimize": "php artisan config:cache && php artisan route:cache && php artisan view:cache",
+        "lint": "eslint resources/js --fix",
+        "format": "prettier --write \"resources/**/*.{js,vue,blade.php}\"",
+        "test": "npm run lint"
+    },
+    "devDependencies": {
+        "@tailwindcss/forms": "^0.5.2",
+        "@tailwindcss/typography": "^0.5.9",
+        "alpinejs": "^3.4.2",
+        "autoprefixer": "^10.4.2",
+        "axios": "^1.6.4",
+        "laravel-vite-plugin": "^1.0.0",
+        "postcss": "^8.4.31",
+        "tailwindcss": "^3.1.0",
+        "terser": "^5.46.1",
+        "vite": "^5.0.0"
+    },
+    "dependencies": {
+        "@popperjs/core": "^2.11.8",
+        "aos": "^2.3.4",
+        "bootstrap": "^5.3.8",
+        "chart.js": "^4.4.0",
+        "date-fns": "^2.30.0",
+        "sweetalert2": "^11.26.21",
+        "swiper": "^12.1.2",
+        "xlsx": "^0.18.5"
+    }
+}

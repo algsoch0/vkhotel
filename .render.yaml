@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: vk-hotel
+    env: php
+    plan: free
+    buildCommand: ./scripts/build.sh
+    startCommand: ./scripts/start.sh
+    envVars:
+      - key: APP_NAME
+        value: "VK Hotel"
+      - key: APP_ENV
+        value: "production"
+      - key: APP_DEBUG
+        value: "false"
+      - key: LOG_CHANNEL
+        value: "stderr"
+      - key: DB_CONNECTION
+        value: "pgsql"
+
+  - type: pgsql
+    name: vk-hotel-db
+    version: 15
+    plan: free
+    ipAllowList: []
