@@ -7,15 +7,17 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        User::create([
-            'name' => 'Admin',
-            'email' => 'admin@vkhotel.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-            'phone' => '+1234567890',
-            'address' => 'Admin Address'
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin@vkhotel.com'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+                'phone' => '+1234567890',
+                'address' => 'Admin Address',
+            ]
+        );
     }
 }

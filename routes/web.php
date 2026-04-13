@@ -23,6 +23,14 @@ Route::post('/rooms/{room}/check-availability', [UserRoomController::class, 'che
 
 // Authenticated User Routes
 Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', function () {
+        if (auth()->user()?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->route('home');
+    })->name('dashboard');
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
