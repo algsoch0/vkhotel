@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class BookingController extends Controller
 {
@@ -17,16 +18,34 @@ class BookingController extends Controller
 
     public function create(Request $request, Room $room)
     {
-        $request->validate([
+        if (!$request->filled(['check_in', 'check_out', 'guests'])) {
+            return view('user.bookings.create', [
+                'room' => $room,
+                'bookingData' => [
+                    'check_in' => now()->addDay()->toDateString(),
+                    'check_out' => now()->addDays(2)->toDateString(),
+                    'guests' => 1,
+                ],
+                'totalPrice' => $room->price,
+                'nights' => 1,
+            ]);
+        }
+
+        $validated = $request->validate([
             'check_in' => 'required|date|after:today',
             'check_out' => 'required|date|after:check_in',
-            'guests' => 'required|integer|min:1'
+            'guests' => 'required|integer|min:1|max:' . $room->capacity
         ]);
 
-        $nights = now()->parse($request->check_in)->diffInDays(now()->parse($request->check_out));
+        $nights = now()->parse($validated['check_in'])->diffInDays(now()->parse($validated['check_out']));
         $totalPrice = $room->price * $nights;
 
-        return view('user.bookings.create', compact('room', 'request', 'totalPrice', 'nights'));
+        return view('user.bookings.create', [
+            'room' => $room,
+            'bookingData' => $validated,
+            'totalPrice' => $totalPrice,
+            'nights' => $nights,
+        ]);
     }
 
     public function store(Request $request)
@@ -36,22 +55,24 @@ class BookingController extends Controller
             'check_in_date' => 'required|date|after:today',
             'check_out_date' => 'required|date|after:check_in_date',
             'guests' => 'required|integer|min:1',
-            'special_requests' => 'nullable|string'
+            'special_requests' => 'nullable|string|max:1200'
         ]);
 
         $room = Room::findOrFail($request->room_id);
+
+        if ((int) $request->guests > (int) $room->capacity) {
+            return back()->withInput()->with('error', 'Guest count exceeds room capacity.');
+        }
         
         // Check availability again
         $isAvailable = !$room->bookings()
-            ->where(function($query) use ($request) {
-                $query->whereBetween('check_in_date', [$request->check_in_date, $request->check_out_date])
-                    ->orWhereBetween('check_out_date', [$request->check_in_date, $request->check_out_date]);
-            })
+            ->where('check_in_date', '<', $request->check_out_date)
+            ->where('check_out_date', '>', $request->check_in_date)
             ->whereIn('status', ['confirmed', 'pending'])
             ->exists();
 
         if (!$isAvailable) {
-            return back()->with('error', 'Room is not available for selected dates');
+            return back()->withInput()->with('error', 'Room is not available for the selected dates.');
         }
 
         $nights = now()->parse($request->check_in_date)->diffInDays(now()->parse($request->check_out_date));
@@ -65,7 +86,8 @@ class BookingController extends Controller
             'guests' => $request->guests,
             'total_price' => $totalPrice,
             'special_requests' => $request->special_requests,
-            'status' => 'pending'
+            'status' => 'pending',
+            'confirmation_code' => 'VK-' . Str::upper(Str::random(10)),
         ]);
 
         return redirect()->route('user.bookings.show', $booking)

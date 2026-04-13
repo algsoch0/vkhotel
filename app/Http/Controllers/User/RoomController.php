@@ -9,28 +9,68 @@ class RoomController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Room::where('is_available', true);
+        $validated = $request->validate([
+            'type' => ['nullable', 'string', 'max:50'],
+            'min_price' => ['nullable', 'numeric', 'min:0'],
+            'max_price' => ['nullable', 'numeric', 'min:0'],
+            'capacity' => ['nullable', 'integer', 'min:1'],
+            'check_in' => ['nullable', 'date', 'after_or_equal:today'],
+            'check_out' => ['nullable', 'date', 'after:check_in'],
+            'guests' => ['nullable', 'integer', 'min:1'],
+            'sort' => ['nullable', 'in:latest,price_low,price_high,popular'],
+        ]);
+
+        $query = Room::query()->where('is_available', true);
 
         // Filter by type
-        if ($request->has('type') && $request->type != '') {
-            $query->where('type', $request->type);
+        if (!empty($validated['type'])) {
+            $query->where('type', $validated['type']);
         }
 
         // Filter by price range
-        if ($request->has('min_price') && $request->min_price != '') {
-            $query->where('price', '>=', $request->min_price);
+        if (!empty($validated['min_price'])) {
+            $query->where('price', '>=', $validated['min_price']);
         }
 
-        if ($request->has('max_price') && $request->max_price != '') {
-            $query->where('price', '<=', $request->max_price);
+        if (!empty($validated['max_price'])) {
+            $query->where('price', '<=', $validated['max_price']);
         }
 
         // Filter by capacity
-        if ($request->has('capacity') && $request->capacity != '') {
-            $query->where('capacity', '>=', $request->capacity);
+        if (!empty($validated['capacity'])) {
+            $query->where('capacity', '>=', $validated['capacity']);
         }
 
-        $rooms = $query->latest()->paginate(9);
+        if (!empty($validated['guests'])) {
+            $query->where('capacity', '>=', $validated['guests']);
+        }
+
+        // Filter available rooms for chosen date range.
+        if (!empty($validated['check_in']) && !empty($validated['check_out'])) {
+            $query->whereDoesntHave('bookings', function ($bookingQuery) use ($validated) {
+                $bookingQuery
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->where('check_in_date', '<', $validated['check_out'])
+                    ->where('check_out_date', '>', $validated['check_in']);
+            });
+        }
+
+        switch ($validated['sort'] ?? 'latest') {
+            case 'price_low':
+                $query->orderBy('price');
+                break;
+            case 'price_high':
+                $query->orderByDesc('price');
+                break;
+            case 'popular':
+                $query->withCount('bookings')->orderByDesc('bookings_count');
+                break;
+            default:
+                $query->latest();
+                break;
+        }
+
+        $rooms = $query->paginate(9);
         $roomTypes = Room::distinct('type')->pluck('type');
 
         return view('user.rooms.index', compact('rooms', 'roomTypes'));
@@ -38,7 +78,18 @@ class RoomController extends Controller
 
     public function show(Room $room)
     {
-        return view('user.rooms.show', compact('room'));
+        $relatedRooms = Room::query()
+            ->where('id', '!=', $room->id)
+            ->where('is_available', true)
+            ->where(function ($query) use ($room) {
+                $query->where('type', $room->type)
+                    ->orWhereBetween('price', [$room->price * 0.8, $room->price * 1.2]);
+            })
+            ->latest()
+            ->take(3)
+            ->get();
+
+        return view('user.rooms.show', compact('room', 'relatedRooms'));
     }
 
     public function checkAvailability(Request $request, Room $room)

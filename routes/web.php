@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('admin.dashboard');
         }
 
-        return redirect()->route('home');
+        return redirect()->route('user.bookings.index');
     })->name('dashboard');
 
     // Profile

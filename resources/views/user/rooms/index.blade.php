@@ -1,102 +1,128 @@
 @extends('layouts.app')
 
-@section('title', 'Our Rooms')
+@section('title', 'Find Your Stay')
 
 @section('content')
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h1 class="text-center">Our Rooms</h1>
-            <p class="text-center">Choose from our selection of luxurious rooms</p>
-        </div>
+<section class="page-header">
+    <div class="container">
+        <h1 data-aos="fade-up">Find Your Perfect Room</h1>
+        <p class="lead" data-aos="fade-up" data-aos-delay="100">Search by budget, dates, guest count, and room type.</p>
     </div>
+</section>
 
-    <!-- Filter Section -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <form action="{{ route('user.rooms.index') }}" method="GET" class="row g-3">
-                        <div class="col-md-3">
-                            <label for="type" class="form-label">Room Type</label>
-                            <select name="type" id="type" class="form-select">
-                                <option value="">All Types</option>
-                                @foreach($roomTypes as $type)
-                                    <option value="{{ $type }}" {{ request('type') == $type ? 'selected' : '' }}>
-                                        {{ ucfirst($type) }}
-                                    </option>
-                                @endforeach
-                            </select>
+<section class="py-5" style="background:#f7f8fb;">
+    <div class="container">
+        <div class="card border-0 shadow-sm mb-4" data-aos="fade-up">
+            <div class="card-body p-4">
+                <form action="{{ route('user.rooms.index') }}" method="GET" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Type</label>
+                        <select name="type" class="form-select">
+                            <option value="">Any</option>
+                            @foreach($roomTypes as $type)
+                                <option value="{{ $type }}" @selected(request('type') == $type)>{{ ucfirst($type) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Guests</label>
+                        <input type="number" name="guests" min="1" class="form-control" value="{{ request('guests') }}" placeholder="2">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Check In</label>
+                        <input type="date" name="check_in" min="{{ now()->toDateString() }}" class="form-control" value="{{ request('check_in') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Check Out</label>
+                        <input type="date" name="check_out" min="{{ now()->addDay()->toDateString() }}" class="form-control" value="{{ request('check_out') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Min / Max</label>
+                        <div class="d-flex gap-2">
+                            <input type="number" name="min_price" min="0" class="form-control" placeholder="0" value="{{ request('min_price') }}">
+                            <input type="number" name="max_price" min="0" class="form-control" placeholder="700" value="{{ request('max_price') }}">
                         </div>
-                        <div class="col-md-3">
-                            <label for="capacity" class="form-label">Capacity</label>
-                            <select name="capacity" id="capacity" class="form-select">
-                                <option value="">Any</option>
-                                <option value="1" {{ request('capacity') == '1' ? 'selected' : '' }}>1 Person</option>
-                                <option value="2" {{ request('capacity') == '2' ? 'selected' : '' }}>2 Persons</option>
-                                <option value="3" {{ request('capacity') == '3' ? 'selected' : '' }}>3 Persons</option>
-                                <option value="4" {{ request('capacity') == '4' ? 'selected' : '' }}>4+ Persons</option>
-                            </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Sort</label>
+                        <select name="sort" class="form-select">
+                            <option value="latest" @selected(request('sort') === 'latest')>Newest</option>
+                            <option value="price_low" @selected(request('sort') === 'price_low')>Price: Low</option>
+                            <option value="price_high" @selected(request('sort') === 'price_high')>Price: High</option>
+                            <option value="popular" @selected(request('sort') === 'popular')>Most Booked</option>
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-2 justify-content-end pt-2">
+                        <a href="{{ route('user.rooms.index') }}" class="btn btn-outline-secondary">Reset</a>
+                        <button class="btn btn-gold" type="submit">Search Rooms</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if($errors->any())
+            <div class="alert alert-danger">
+                <strong>Please fix these filters:</strong>
+                <ul class="mb-0 mt-2">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 mb-0">{{ $rooms->total() }} room(s) found</h2>
+            <span class="text-muted">Page {{ $rooms->currentPage() }} of {{ $rooms->lastPage() }}</span>
+        </div>
+
+        <div class="row g-4">
+            @forelse($rooms as $room)
+                <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="{{ ($loop->index % 3) * 100 }}">
+                    <article class="card border-0 shadow-sm h-100">
+                        @php
+                            $image = $room->image ? asset($room->image) : 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80';
+                        @endphp
+                        <img src="{{ $image }}" class="card-img-top" style="height:220px;object-fit:cover;" alt="{{ $room->type }} room">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between mb-2">
+                                <h3 class="h5 mb-0">{{ ucfirst($room->type) }} Room</h3>
+                                <span class="badge bg-light text-dark">#{{ $room->room_number }}</span>
+                            </div>
+                            <p class="text-muted small">{{ \Illuminate\Support\Str::limit($room->description ?: 'Comfort-focused room with curated amenities and concierge support.', 110) }}</p>
+                            <div class="d-flex flex-wrap gap-2 mb-3 small">
+                                <span class="badge rounded-pill text-bg-light"><i class="fas fa-users me-1"></i>{{ $room->capacity }} Guests</span>
+                                <span class="badge rounded-pill text-bg-light"><i class="fas fa-door-open me-1"></i>{{ ucfirst($room->type) }}</span>
+                                @if($room->is_available)
+                                    <span class="badge rounded-pill text-bg-success">Available</span>
+                                @endif
+                            </div>
+                            <div class="mt-auto d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-0 h5" style="color:var(--primary-color);">${{ number_format($room->price, 2) }}</p>
+                                    <small class="text-muted">per night</small>
+                                </div>
+                                <a href="{{ route('user.rooms.show', $room) }}" class="btn btn-dark">View Room</a>
+                            </div>
                         </div>
-                        <div class="col-md-2">
-                            <label for="min_price" class="form-label">Min Price</label>
-                            <input type="number" name="min_price" id="min_price" class="form-control" value="{{ request('min_price') }}" placeholder="$">
-                        </div>
-                        <div class="col-md-2">
-                            <label for="max_price" class="form-label">Max Price</label>
-                            <input type="number" name="max_price" id="max_price" class="form-control" value="{{ request('max_price') }}" placeholder="$">
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">Filter</button>
-                        </div>
-                    </form>
+                    </article>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Rooms Grid -->
-    <div class="row">
-        @forelse($rooms as $room)
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                @if($room->image)
-                    <img src="{{ asset($room->image) }}" class="card-img-top" alt="{{ $room->type }}" style="height: 200px; object-fit: cover;">
-                @else
-                    <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Room Image">
-                @endif
-                <div class="card-body">
-                    <h5 class="card-title">{{ ucfirst($room->type) }} Room - #{{ $room->room_number }}</h5>
-                    <p class="card-text">{{ Str::limit($room->description, 100) }}</p>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-users"></i> Capacity: {{ $room->capacity }} persons</li>
-                        <li><i class="fas fa-tag"></i> Price: ${{ number_format($room->price, 2) }}/night</li>
-                        <li><i class="fas fa-star"></i> Status: 
-                            @if($room->is_available)
-                                <span class="badge bg-success">Available</span>
-                            @else
-                                <span class="badge bg-danger">Not Available</span>
-                            @endif
-                        </li>
-                    </ul>
-                    <a href="{{ route('user.rooms.show', $room) }}" class="btn btn-primary w-100">View Details</a>
+            @empty
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center py-5">
+                            <h3 class="h5">No rooms matched your filters.</h3>
+                            <p class="text-muted mb-3">Try broadening your date or budget range.</p>
+                            <a href="{{ route('user.rooms.index') }}" class="btn btn-gold">Show All Rooms</a>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            @endforelse
         </div>
-        @empty
-        <div class="col-md-12">
-            <div class="alert alert-info text-center">
-                No rooms found matching your criteria.
-            </div>
-        </div>
-        @endforelse
-    </div>
 
-    <!-- Pagination -->
-    <div class="row">
-        <div class="col-md-12">
+        <div class="mt-4">
             {{ $rooms->withQueryString()->links() }}
         </div>
     </div>
-</div>
+</section>
 @endsection
